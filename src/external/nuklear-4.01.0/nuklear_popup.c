@@ -6,7 +6,7 @@
  *                              POPUP
  *
  * ===============================================================*/
-NK_API int
+NK_API nk_bool
 nk_popup_begin(struct nk_context *ctx, enum nk_popup_type type,
     const char *title, nk_flags flags, struct nk_rect rect)
 {
@@ -27,7 +27,7 @@ nk_popup_begin(struct nk_context *ctx, enum nk_popup_type type,
 
     win = ctx->current;
     panel = win->layout;
-    NK_ASSERT(!(panel->type & NK_PANEL_SET_POPUP) && "popups are not allowed to have popups");
+    NK_ASSERT(!((int)panel->type & (int)NK_PANEL_SET_POPUP) && "popups are not allowed to have popups");
     (void)panel;
     title_len = (int)nk_strlen(title);
     title_hash = nk_murmur_hash(title, (int)title_len, NK_PANEL_POPUP);
@@ -102,7 +102,7 @@ nk_popup_begin(struct nk_context *ctx, enum nk_popup_type type,
         return 0;
     }
 }
-NK_LIB int
+NK_LIB nk_bool
 nk_nonblock_begin(struct nk_context *ctx,
     nk_flags flags, struct nk_rect body, struct nk_rect header,
     enum nk_panel_type panel_type)
@@ -121,7 +121,7 @@ nk_nonblock_begin(struct nk_context *ctx,
     /* popups cannot have popups */
     win = ctx->current;
     panel = win->layout;
-    NK_ASSERT(!(panel->type & NK_PANEL_SET_POPUP));
+    NK_ASSERT(!((int)panel->type & (int)NK_PANEL_SET_POPUP));
     (void)panel;
     popup = win->popup.win;
     if (!popup) {
@@ -134,7 +134,11 @@ nk_nonblock_begin(struct nk_context *ctx,
     } else {
         /* close the popup if user pressed outside or in the header */
         int pressed, in_body, in_header;
+#ifdef NK_BUTTON_TRIGGER_ON_RELEASE
+        pressed = nk_input_is_mouse_released(&ctx->input, NK_BUTTON_LEFT);
+#else
         pressed = nk_input_is_mouse_pressed(&ctx->input, NK_BUTTON_LEFT);
+#endif
         in_body = nk_input_is_mouse_hovering_rect(&ctx->input, body);
         in_header = nk_input_is_mouse_hovering_rect(&ctx->input, header);
         if (pressed && (!in_body || in_header))
@@ -190,7 +194,7 @@ nk_popup_close(struct nk_context *ctx)
 
     popup = ctx->current;
     NK_ASSERT(popup->parent);
-    NK_ASSERT(popup->layout->type & NK_PANEL_SET_POPUP);
+    NK_ASSERT((int)popup->layout->type & (int)NK_PANEL_SET_POPUP);
     popup->flags |= NK_WINDOW_HIDDEN;
 }
 NK_API void

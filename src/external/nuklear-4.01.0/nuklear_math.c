@@ -6,33 +6,36 @@
  *                              MATH
  *
  * ===============================================================*/
-/*  Since nuklear is supposed to work on all systems providing floating point
-    math without any dependencies I also had to implement my own math functions
-    for sqrt, sin and cos. Since the actual highly accurate implementations for
-    the standard library functions are quite complex and I do not need high
-    precision for my use cases I use approximations.
-
-    Sqrt
-    ----
-    For square root nuklear uses the famous fast inverse square root:
-    https://en.wikipedia.org/wiki/Fast_inverse_square_root with
-    slightly tweaked magic constant. While on today's hardware it is
-    probably not faster it is still fast and accurate enough for
-    nuklear's use cases. IMPORTANT: this requires float format IEEE 754
-
-    Sine/Cosine
-    -----------
-    All constants inside both function are generated Remez's minimax
-    approximations for value range 0...2*PI. The reason why I decided to
-    approximate exactly that range is that nuklear only needs sine and
-    cosine to generate circles which only requires that exact range.
-    In addition I used Remez instead of Taylor for additional precision:
-    www.lolengine.net/blog/2011/12/21/better-function-approximations.
-
-    The tool I used to generate constants for both sine and cosine
-    (it can actually approximate a lot more functions) can be
-    found here: www.lolengine.net/wiki/oss/lolremez
+/*/// ### Math
+///  Since nuklear is supposed to work on all systems providing floating point
+///  math without any dependencies I also had to implement my own math functions
+///  for sqrt, sin and cos. Since the actual highly accurate implementations for
+///  the standard library functions are quite complex and I do not need high
+///  precision for my use cases I use approximations.
+///
+///  Sqrt
+///  ----
+///  For square root nuklear uses the famous fast inverse square root:
+///  https://en.wikipedia.org/wiki/Fast_inverse_square_root with
+///  slightly tweaked magic constant. While on today's hardware it is
+///  probably not faster it is still fast and accurate enough for
+///  nuklear's use cases. IMPORTANT: this requires float format IEEE 754
+///
+///  Sine/Cosine
+///  -----------
+///  All constants inside both function are generated Remez's minimax
+///  approximations for value range 0...2*PI. The reason why I decided to
+///  approximate exactly that range is that nuklear only needs sine and
+///  cosine to generate circles which only requires that exact range.
+///  In addition I used Remez instead of Taylor for additional precision:
+///  www.lolengine.net/blog/2011/12/21/better-function-approximations.
+///
+///  The tool I used to generate constants for both sine and cosine
+///  (it can actually approximate a lot more functions) can be
+///  found here: www.lolengine.net/wiki/oss/lolremez
 */
+#ifndef NK_INV_SQRT
+#define NK_INV_SQRT nk_inv_sqrt
 NK_LIB float
 nk_inv_sqrt(float n)
 {
@@ -45,11 +48,9 @@ nk_inv_sqrt(float n)
     conv.f = conv.f * (threehalfs - (x2 * conv.f * conv.f));
     return conv.f;
 }
-NK_LIB float
-nk_sqrt(float x)
-{
-    return x * nk_inv_sqrt(x);
-}
+#endif
+#ifndef NK_SIN
+#define NK_SIN nk_sin
 NK_LIB float
 nk_sin(float x)
 {
@@ -63,11 +64,14 @@ nk_sin(float x)
     NK_STORAGE const float a7 = +1.38235642404333740e-4f;
     return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
 }
+#endif
+#ifndef NK_COS
+#define NK_COS nk_cos
 NK_LIB float
 nk_cos(float x)
 {
-    // New implementation. Also generated using lolremez.
-    // Old version significantly deviated from expected results.
+    /* New implementation. Also generated using lolremez. */
+    /* Old version significantly deviated from expected results. */
     NK_STORAGE const float a0 = 9.9995999154986614e-1f;
     NK_STORAGE const float a1 = 1.2548995793001028e-3f;
     NK_STORAGE const float a2 = -5.0648546280678015e-1f;
@@ -79,6 +83,7 @@ nk_cos(float x)
     NK_STORAGE const float a8 = -1.8776444013090451e-5f;
     return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
 }
+#endif
 NK_LIB nk_uint
 nk_round_up_pow2(nk_uint v)
 {

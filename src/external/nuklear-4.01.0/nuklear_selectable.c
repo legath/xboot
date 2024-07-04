@@ -8,7 +8,7 @@
  * ===============================================================*/
 NK_LIB void
 nk_draw_selectable(struct nk_command_buffer *out,
-    nk_flags state, const struct nk_style_selectable *style, int active,
+    nk_flags state, const struct nk_style_selectable *style, nk_bool active,
     const struct nk_rect *bounds,
     const struct nk_rect *icon, const struct nk_image *img, enum nk_symbol_type sym,
     const char *string, int len, nk_flags align, const struct nk_user_font *font)
@@ -41,23 +41,33 @@ nk_draw_selectable(struct nk_command_buffer *out,
             text.text = style->text_normal_active;
         }
     }
+
+    text.text = nk_rgb_factor(text.text, style->color_factor);
+
     /* draw selectable background and text */
-    if (background->type == NK_STYLE_ITEM_IMAGE) {
-        nk_draw_image(out, *bounds, &background->data.image, nk_white);
-        text.background = nk_rgba(0,0,0,0);
-    } else {
-        nk_fill_rect(out, *bounds, style->rounding, background->data.color);
-        text.background = background->data.color;
+    switch (background->type) {
+        case NK_STYLE_ITEM_IMAGE:
+            text.background = nk_rgba(0, 0, 0, 0);
+            nk_draw_image(out, *bounds, &background->data.image, nk_rgb_factor(nk_white, style->color_factor));
+            break;
+        case NK_STYLE_ITEM_NINE_SLICE:
+            text.background = nk_rgba(0, 0, 0, 0);
+            nk_draw_nine_slice(out, *bounds, &background->data.slice, nk_rgb_factor(nk_white, style->color_factor));
+            break;
+        case NK_STYLE_ITEM_COLOR:
+            text.background = background->data.color;
+            nk_fill_rect(out, *bounds, style->rounding, background->data.color);
+            break;
     }
     if (icon) {
-        if (img) nk_draw_image(out, *icon, img, nk_white);
+        if (img) nk_draw_image(out, *icon, img, nk_rgb_factor(nk_white, style->color_factor));
         else nk_draw_symbol(out, sym, *icon, text.background, text.text, 1, font);
     }
     nk_widget_text(out, *bounds, string, len, &text, align, font);
 }
-NK_LIB int
+NK_LIB nk_bool
 nk_do_selectable(nk_flags *state, struct nk_command_buffer *out,
-    struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
+    struct nk_rect bounds, const char *str, int len, nk_flags align, nk_bool *value,
     const struct nk_style_selectable *style, const struct nk_input *in,
     const struct nk_user_font *font)
 {
@@ -91,13 +101,13 @@ nk_do_selectable(nk_flags *state, struct nk_command_buffer *out,
     if (style->draw_end) style->draw_end(out, style->userdata);
     return old_value != *value;
 }
-NK_LIB int
+NK_LIB nk_bool
 nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
-    struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
+    struct nk_rect bounds, const char *str, int len, nk_flags align, nk_bool *value,
     const struct nk_image *img, const struct nk_style_selectable *style,
     const struct nk_input *in, const struct nk_user_font *font)
 {
-    int old_value;
+    nk_bool old_value;
     struct nk_rect touch;
     struct nk_rect icon;
 
@@ -138,9 +148,9 @@ nk_do_selectable_image(nk_flags *state, struct nk_command_buffer *out,
     if (style->draw_end) style->draw_end(out, style->userdata);
     return old_value != *value;
 }
-NK_LIB int
+NK_LIB nk_bool
 nk_do_selectable_symbol(nk_flags *state, struct nk_command_buffer *out,
-    struct nk_rect bounds, const char *str, int len, nk_flags align, int *value,
+    struct nk_rect bounds, const char *str, int len, nk_flags align, nk_bool *value,
     enum nk_symbol_type sym, const struct nk_style_selectable *style,
     const struct nk_input *in, const struct nk_user_font *font)
 {
@@ -186,9 +196,9 @@ nk_do_selectable_symbol(nk_flags *state, struct nk_command_buffer *out,
     return old_value != *value;
 }
 
-NK_API int
+NK_API nk_bool
 nk_selectable_text(struct nk_context *ctx, const char *str, int len,
-    nk_flags align, int *value)
+    nk_flags align, nk_bool *value)
 {
     struct nk_window *win;
     struct nk_panel *layout;
@@ -211,13 +221,13 @@ nk_selectable_text(struct nk_context *ctx, const char *str, int len,
 
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
-    in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+    in = (state == NK_WIDGET_ROM || state == NK_WIDGET_DISABLED || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_selectable(&ctx->last_widget_state, &win->buffer, bounds,
                 str, len, align, value, &style->selectable, in, style->font);
 }
-NK_API int
+NK_API nk_bool
 nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
-    const char *str, int len, nk_flags align, int *value)
+    const char *str, int len, nk_flags align, nk_bool *value)
 {
     struct nk_window *win;
     struct nk_panel *layout;
@@ -240,13 +250,13 @@ nk_selectable_image_text(struct nk_context *ctx, struct nk_image img,
 
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
-    in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+    in = (state == NK_WIDGET_ROM || state == NK_WIDGET_DISABLED || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_selectable_image(&ctx->last_widget_state, &win->buffer, bounds,
                 str, len, align, value, &img, &style->selectable, in, style->font);
 }
-NK_API int
+NK_API nk_bool
 nk_selectable_symbol_text(struct nk_context *ctx, enum nk_symbol_type sym,
-    const char *str, int len, nk_flags align, int *value)
+    const char *str, int len, nk_flags align, nk_bool *value)
 {
     struct nk_window *win;
     struct nk_panel *layout;
@@ -269,53 +279,53 @@ nk_selectable_symbol_text(struct nk_context *ctx, enum nk_symbol_type sym,
 
     state = nk_widget(&bounds, ctx);
     if (!state) return 0;
-    in = (state == NK_WIDGET_ROM || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+    in = (state == NK_WIDGET_ROM || state == NK_WIDGET_DISABLED || layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
     return nk_do_selectable_symbol(&ctx->last_widget_state, &win->buffer, bounds,
                 str, len, align, value, sym, &style->selectable, in, style->font);
 }
-NK_API int
+NK_API nk_bool
 nk_selectable_symbol_label(struct nk_context *ctx, enum nk_symbol_type sym,
-    const char *title, nk_flags align, int *value)
+    const char *title, nk_flags align, nk_bool *value)
 {
     return nk_selectable_symbol_text(ctx, sym, title, nk_strlen(title), align, value);
 }
-NK_API int nk_select_text(struct nk_context *ctx, const char *str, int len,
-    nk_flags align, int value)
+NK_API nk_bool nk_select_text(struct nk_context *ctx, const char *str, int len,
+    nk_flags align, nk_bool value)
 {
     nk_selectable_text(ctx, str, len, align, &value);return value;
 }
-NK_API int nk_selectable_label(struct nk_context *ctx, const char *str, nk_flags align, int *value)
+NK_API nk_bool nk_selectable_label(struct nk_context *ctx, const char *str, nk_flags align, nk_bool *value)
 {
     return nk_selectable_text(ctx, str, nk_strlen(str), align, value);
 }
-NK_API int nk_selectable_image_label(struct nk_context *ctx,struct nk_image img,
-    const char *str, nk_flags align, int *value)
+NK_API nk_bool nk_selectable_image_label(struct nk_context *ctx,struct nk_image img,
+    const char *str, nk_flags align, nk_bool *value)
 {
     return nk_selectable_image_text(ctx, img, str, nk_strlen(str), align, value);
 }
-NK_API int nk_select_label(struct nk_context *ctx, const char *str, nk_flags align, int value)
+NK_API nk_bool nk_select_label(struct nk_context *ctx, const char *str, nk_flags align, nk_bool value)
 {
     nk_selectable_text(ctx, str, nk_strlen(str), align, &value);return value;
 }
-NK_API int nk_select_image_label(struct nk_context *ctx, struct nk_image img,
-    const char *str, nk_flags align, int value)
+NK_API nk_bool nk_select_image_label(struct nk_context *ctx, struct nk_image img,
+    const char *str, nk_flags align, nk_bool value)
 {
     nk_selectable_image_text(ctx, img, str, nk_strlen(str), align, &value);return value;
 }
-NK_API int nk_select_image_text(struct nk_context *ctx, struct nk_image img,
-    const char *str, int len, nk_flags align, int value)
+NK_API nk_bool nk_select_image_text(struct nk_context *ctx, struct nk_image img,
+    const char *str, int len, nk_flags align, nk_bool value)
 {
     nk_selectable_image_text(ctx, img, str, len, align, &value);return value;
 }
-NK_API int
+NK_API nk_bool
 nk_select_symbol_text(struct nk_context *ctx, enum nk_symbol_type sym,
-    const char *title, int title_len, nk_flags align, int value)
+    const char *title, int title_len, nk_flags align, nk_bool value)
 {
     nk_selectable_symbol_text(ctx, sym, title, title_len, align, &value);return value;
 }
-NK_API int
+NK_API nk_bool
 nk_select_symbol_label(struct nk_context *ctx, enum nk_symbol_type sym,
-    const char *title, nk_flags align, int value)
+    const char *title, nk_flags align, nk_bool value)
 {
     return nk_select_symbol_text(ctx, sym, title, nk_strlen(title), align, value);
 }

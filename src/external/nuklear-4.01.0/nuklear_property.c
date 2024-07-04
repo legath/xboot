@@ -51,6 +51,7 @@ nk_property_behavior(nk_flags *ws, const struct nk_input *in,
     struct nk_rect empty, int *state, struct nk_property_variant *variant,
     float inc_per_pixel)
 {
+    nk_widget_state_reset(ws);
     if (in && *state == NK_PROPERTY_DEFAULT) {
         if (nk_button_behavior(ws, edit, in, NK_BUTTON_DEFAULT))
             *state = NK_PROPERTY_EDIT;
@@ -84,19 +85,30 @@ nk_draw_property(struct nk_command_buffer *out, const struct nk_style_property *
         text.text = style->label_normal;
     }
 
+    text.text = nk_rgb_factor(text.text, style->color_factor);
+
     /* draw background */
-    if (background->type == NK_STYLE_ITEM_IMAGE) {
-        nk_draw_image(out, *bounds, &background->data.image, nk_white);
-        text.background = nk_rgba(0,0,0,0);
-    } else {
-        text.background = background->data.color;
-        nk_fill_rect(out, *bounds, style->rounding, background->data.color);
-        nk_stroke_rect(out, *bounds, style->rounding, style->border, background->data.color);
+    switch(background->type) {
+        case NK_STYLE_ITEM_IMAGE:
+            text.background = nk_rgba(0, 0, 0, 0);
+            nk_draw_image(out, *bounds, &background->data.image, nk_rgb_factor(nk_white, style->color_factor));
+            break;
+        case NK_STYLE_ITEM_NINE_SLICE:
+            text.background = nk_rgba(0, 0, 0, 0);
+            nk_draw_nine_slice(out, *bounds, &background->data.slice, nk_rgb_factor(nk_white, style->color_factor));
+            break;
+        case NK_STYLE_ITEM_COLOR:
+            text.background = background->data.color;
+            nk_fill_rect(out, *bounds, style->rounding, nk_rgb_factor(background->data.color, style->color_factor));
+            nk_stroke_rect(out, *bounds, style->rounding, style->border, nk_rgb_factor(background->data.color, style->color_factor));
+            break;
     }
 
     /* draw label */
     text.padding = nk_vec2(0,0);
-    nk_widget_text(out, *label, name, len, &text, NK_TEXT_CENTERED, font);
+    if (name && name[0] != '#') {
+        nk_widget_text(out, *label, name, len, &text, NK_TEXT_CENTERED, font);
+    }
 }
 NK_LIB void
 nk_do_property(nk_flags *ws,
@@ -113,8 +125,8 @@ nk_do_property(nk_flags *ws,
         nk_filter_decimal,
         nk_filter_float
     };
-    int active, old;
-    int num_len, name_len;
+    nk_bool active, old;
+    int num_len = 0, name_len = 0;
     char string[NK_MAX_NUMBER_BUFFER];
     float size;
 
@@ -134,7 +146,9 @@ nk_do_property(nk_flags *ws,
     left.y = property.y + style->border + property.h/2.0f - left.h/2;
 
     /* text label */
-    name_len = nk_strlen(name);
+    if (name && name[0] != '#') {
+        name_len = nk_strlen(name);
+    }
     size = font->width(font->userdata, font->height, name, name_len);
     label.x = left.x + left.w + style->padding.x;
     label.w = (float)size + 2 * style->padding.x;
@@ -241,7 +255,7 @@ nk_do_property(nk_flags *ws,
     text_edit->string.buffer.memory.ptr = dst;
     text_edit->string.buffer.size = NK_MAX_NUMBER_BUFFER;
     text_edit->mode = NK_TEXT_EDIT_MODE_INSERT;
-    nk_do_edit(ws, out, edit, NK_EDIT_FIELD|NK_EDIT_AUTO_SELECT,
+    nk_do_edit(ws, out, edit, (int)NK_EDIT_FIELD|(int)NK_EDIT_AUTO_SELECT,
         filters[filter], text_edit, &style->edit, (*state == NK_PROPERTY_EDIT) ? in: 0, font);
 
     *length = text_edit->string.len;
@@ -375,7 +389,7 @@ nk_property(struct nk_context *ctx, const char *name, struct nk_property_variant
     old_state = *state;
     ctx->text_edit.clip = ctx->clip;
     in = ((s == NK_WIDGET_ROM && !win->property.active) ||
-        layout->flags & NK_WINDOW_ROM) ? 0 : &ctx->input;
+        layout->flags & NK_WINDOW_ROM || s == NK_WIDGET_DISABLED) ? 0 : &ctx->input;
     nk_do_property(&ctx->last_widget_state, &win->buffer, bounds, name,
         variant, inc_per_pixel, buffer, len, state, cursor, select_begin,
         select_end, &style->property, filter, in, style->font, &ctx->text_edit,

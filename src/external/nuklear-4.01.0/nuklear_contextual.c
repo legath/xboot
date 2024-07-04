@@ -6,13 +6,14 @@
  *                          CONTEXTUAL
  *
  * ===============================================================*/
-NK_API int
+NK_API nk_bool
 nk_contextual_begin(struct nk_context *ctx, nk_flags flags, struct nk_vec2 size,
     struct nk_rect trigger_bounds)
 {
     struct nk_window *win;
     struct nk_window *popup;
     struct nk_rect body;
+    struct nk_input* in;
 
     NK_STORAGE const struct nk_rect null_rect = {-1,-1,0,0};
     int is_clicked = 0;
@@ -33,39 +34,43 @@ nk_contextual_begin(struct nk_context *ctx, nk_flags flags, struct nk_vec2 size,
     /* check if currently active contextual is active */
     popup = win->popup.win;
     is_open = (popup && win->popup.type == NK_PANEL_CONTEXTUAL);
-    is_clicked = nk_input_mouse_clicked(&ctx->input, NK_BUTTON_RIGHT, trigger_bounds);
-    if (win->popup.active_con && win->popup.con_count != win->popup.active_con)
-        return 0;
-    if (!is_open && win->popup.active_con)
-        win->popup.active_con = 0;
-    if ((!is_open && !is_clicked))
-        return 0;
+    in = win->widgets_disabled ? 0 : &ctx->input;
+    if (in) {
+        is_clicked = nk_input_mouse_clicked(in, NK_BUTTON_RIGHT, trigger_bounds);
+        if (win->popup.active_con && win->popup.con_count != win->popup.active_con)
+            return 0;
+        if (!is_open && win->popup.active_con)
+            win->popup.active_con = 0;
+        if ((!is_open && !is_clicked))
+            return 0;
 
-    /* calculate contextual position on click */
-    win->popup.active_con = win->popup.con_count;
-    if (is_clicked) {
-        body.x = ctx->input.mouse.pos.x;
-        body.y = ctx->input.mouse.pos.y;
-    } else {
-        body.x = popup->bounds.x;
-        body.y = popup->bounds.y;
-    }
-    body.w = size.x;
-    body.h = size.y;
+        /* calculate contextual position on click */
+        win->popup.active_con = win->popup.con_count;
+        if (is_clicked) {
+            body.x = in->mouse.pos.x;
+            body.y = in->mouse.pos.y;
+        } else {
+            body.x = popup->bounds.x;
+            body.y = popup->bounds.y;
+        }
 
-    /* start nonblocking contextual popup */
-    ret = nk_nonblock_begin(ctx, flags|NK_WINDOW_NO_SCROLLBAR, body,
+        body.w = size.x;
+        body.h = size.y;
+
+        /* start nonblocking contextual popup */
+        ret = nk_nonblock_begin(ctx, flags | NK_WINDOW_NO_SCROLLBAR, body,
             null_rect, NK_PANEL_CONTEXTUAL);
-    if (ret) win->popup.type = NK_PANEL_CONTEXTUAL;
-    else {
-        win->popup.active_con = 0;
-        win->popup.type = NK_PANEL_NONE;
-        if (win->popup.win)
-            win->popup.win->flags = 0;
+        if (ret) win->popup.type = NK_PANEL_CONTEXTUAL;
+        else {
+            win->popup.active_con = 0;
+            win->popup.type = NK_PANEL_NONE;
+            if (win->popup.win)
+                win->popup.win->flags = 0;
+        }
     }
     return ret;
 }
-NK_API int
+NK_API nk_bool
 nk_contextual_item_text(struct nk_context *ctx, const char *text, int len,
     nk_flags alignment)
 {
@@ -95,12 +100,12 @@ nk_contextual_item_text(struct nk_context *ctx, const char *text, int len,
     }
     return nk_false;
 }
-NK_API int
+NK_API nk_bool
 nk_contextual_item_label(struct nk_context *ctx, const char *label, nk_flags align)
 {
     return nk_contextual_item_text(ctx, label, nk_strlen(label), align);
 }
-NK_API int
+NK_API nk_bool
 nk_contextual_item_image_text(struct nk_context *ctx, struct nk_image img,
     const char *text, int len, nk_flags align)
 {
@@ -130,13 +135,13 @@ nk_contextual_item_image_text(struct nk_context *ctx, struct nk_image img,
     }
     return nk_false;
 }
-NK_API int
+NK_API nk_bool
 nk_contextual_item_image_label(struct nk_context *ctx, struct nk_image img,
     const char *label, nk_flags align)
 {
     return nk_contextual_item_image_text(ctx, img, label, nk_strlen(label), align);
 }
-NK_API int
+NK_API nk_bool
 nk_contextual_item_symbol_text(struct nk_context *ctx, enum nk_symbol_type symbol,
     const char *text, int len, nk_flags align)
 {
@@ -166,7 +171,7 @@ nk_contextual_item_symbol_text(struct nk_context *ctx, enum nk_symbol_type symbo
     }
     return nk_false;
 }
-NK_API int
+NK_API nk_bool
 nk_contextual_item_symbol_label(struct nk_context *ctx, enum nk_symbol_type symbol,
     const char *text, nk_flags align)
 {
@@ -193,7 +198,7 @@ nk_contextual_end(struct nk_context *ctx)
     popup = ctx->current;
     panel = popup->layout;
     NK_ASSERT(popup->parent);
-    NK_ASSERT(panel->type & NK_PANEL_SET_POPUP);
+    NK_ASSERT((int)panel->type & (int)NK_PANEL_SET_POPUP);
     if (panel->flags & NK_WINDOW_DYNAMIC) {
         /* Close behavior
         This is a bit of a hack solution since we do not know before we end our popup

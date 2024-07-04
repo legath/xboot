@@ -8,8 +8,8 @@
  * ===============================================================*/
 NK_INTERN int nk_str_match_here(const char *regexp, const char *text);
 NK_INTERN int nk_str_match_star(int c, const char *regexp, const char *text);
-NK_LIB int nk_is_lower(int c) {return (c >= 'a' && c <= 'z') || (c >= 0xE0 && c <= 0xFF);}
-NK_LIB int nk_is_upper(int c){return (c >= 'A' && c <= 'Z') || (c >= 0xC0 && c <= 0xDF);}
+NK_LIB nk_bool nk_is_lower(int c) {return (c >= 'a' && c <= 'z') || (c >= 0xE0 && c <= 0xFF);}
+NK_LIB nk_bool nk_is_upper(int c){return (c >= 'A' && c <= 'Z') || (c >= 0xC0 && c <= 0xDF);}
 NK_LIB int nk_to_upper(int c) {return (c >= 'a' && c <= 'z') ? (c - ('a' - 'A')) : c;}
 NK_LIB int nk_to_lower(int c) {return (c >= 'A' && c <= 'Z') ? (c - ('a' + 'A')) : c;}
 
@@ -69,6 +69,7 @@ nk_memcopy(void *dst0, const void *src0, nk_size length)
 done:
     return (dst0);
 }
+
 NK_LIB void
 nk_memset(void *ptr, int c0, nk_size size)
 {
@@ -120,6 +121,7 @@ nk_memset(void *ptr, int c0, nk_size size)
     #undef nk_wsize
     #undef nk_wmask
 }
+
 NK_LIB void
 nk_zero(void *ptr, nk_size size)
 {
@@ -493,6 +495,7 @@ nk_itoa(char *s, long n)
     nk_strrev_ascii(s);
     return s;
 }
+
 NK_LIB char*
 nk_dtoa(char *s, double n)
 {
@@ -571,6 +574,7 @@ nk_dtoa(char *s, double n)
     *(c) = '\0';
     return s;
 }
+
 #ifdef NK_INCLUDE_STANDARD_VARARGS
 #ifndef NK_INCLUDE_STANDARD_IO
 NK_INTERN int
@@ -975,7 +979,7 @@ nk_murmur_hash(const void * key, int len, nk_hash seed)
 }
 #ifdef NK_INCLUDE_STANDARD_IO
 NK_LIB char*
-nk_file_load(const char* path, nk_size* siz, struct nk_allocator *alloc)
+nk_file_load(const char* path, nk_size* siz, const struct nk_allocator *alloc)
 {
     char *buf;
     FILE *fd;
