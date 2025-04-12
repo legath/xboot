@@ -1,5 +1,5 @@
 /*
- * init/main.c
+ * sys-uart.c
  *
  * Copyright(c) 2007-2023 Jianjun Jiang <8192542@qq.com>
  * Official site: http://xboot.org
@@ -27,74 +27,15 @@
  */
 
 #include <xboot.h>
-#include <init.h>
 
-extern void sys_uart_putc(char c);
-
-static void init_task(struct task_t * task, void * data)
+void sys_uart_init(void)
 {
-	sys_uart_putc('5');
-
-	/* Do initial vfs */
-	do_init_vfs();
-
-	sys_uart_putc('6');
-
-	/* Do initial calls */
-	do_initcalls();
-
-	sys_uart_putc('7');
-
-	/* Do initial setting */
-	do_init_setting();
-
-	sys_uart_putc('8');
-
-	/* Do show logo */
-	do_show_logo();
-
-	sys_uart_putc('9');
-	/* Do play audio */
-	do_play_audio();
-
-	sys_uart_putc('a');
-	/* Do auto mount */
-	do_auto_mount();
-
-	sys_uart_putc('b');
-	/* Do idle task */
-	do_idle_task();
-
-	sys_uart_putc('c');
-	/* Do auto boot */
-	do_auto_boot();
-
-	sys_uart_putc('d');
-	/* Do shell task */
-	do_shell_task();
 }
 
-void xboot_main(void)
+void sys_uart_putc(char c)
 {
-	sys_uart_putc('1');
+	virtual_addr_t addr = 0x42500000;
 
-	/* Do initial memory */
-	do_init_mem();
-
-	sys_uart_putc('2');
-
-	/* Do initial scheduler */
-	do_init_sched();
-
-	sys_uart_putc('3');
-
-	/* Create init task */
-	//task_create(scheduler_self(), "init", NULL, NULL, init_task, NULL, 0, 0);
-
-	sys_uart_putc('4');
-	init_task(NULL, NULL);
-	sys_uart_putc('4');
-
-	/* Scheduler loop */
-	//scheduler_loop();
+	while((read32(addr + 0x7c) & (0x1 << 1)) == 0);
+	write32(addr + 0x00, c);
 }

@@ -7,7 +7,7 @@ TOPDIR = $(shell dirname $(shell pwd)/$(lastword $(MAKEFILE_LIST)))
 .PHONY: all clean
 
 all:
-	@TOPDIR="$(TOPDIR)" $(MAKE) -s -C src all
+	@TOPDIR="$(TOPDIR)" $(MAKE) -s -C src -j8 all
 
 clean:
 	@TOPDIR="$(TOPDIR)" $(MAKE) -s -C src clean

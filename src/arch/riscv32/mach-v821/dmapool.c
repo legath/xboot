@@ -1,5 +1,5 @@
 /*
- * init/main.c
+ * dmapool.c
  *
  * Copyright(c) 2007-2023 Jianjun Jiang <8192542@qq.com>
  * Official site: http://xboot.org
@@ -25,76 +25,53 @@
  * SOFTWARE.
  *
  */
+#include <stdint.h>
+#include <sizes.h>
+#include <barrier.h>
+#include <riscv32.h>
+#include <dma/dma.h>
 
-#include <xboot.h>
-#include <init.h>
+extern unsigned char __dma_start[];
+extern unsigned char __dma_end[];
 
-extern void sys_uart_putc(char c);
+static void * __dma_pool = NULL;
+static spinlock_t __dma_lock = SPIN_LOCK_INIT();
 
-static void init_task(struct task_t * task, void * data)
+void * dma_alloc_coherent(unsigned long size)
 {
-	sys_uart_putc('5');
+	irq_flags_t flags;
+	void * m;
 
-	/* Do initial vfs */
-	do_init_vfs();
-
-	sys_uart_putc('6');
-
-	/* Do initial calls */
-	do_initcalls();
-
-	sys_uart_putc('7');
-
-	/* Do initial setting */
-	do_init_setting();
-
-	sys_uart_putc('8');
-
-	/* Do show logo */
-	do_show_logo();
-
-	sys_uart_putc('9');
-	/* Do play audio */
-	do_play_audio();
-
-	sys_uart_putc('a');
-	/* Do auto mount */
-	do_auto_mount();
-
-	sys_uart_putc('b');
-	/* Do idle task */
-	do_idle_task();
-
-	sys_uart_putc('c');
-	/* Do auto boot */
-	do_auto_boot();
-
-	sys_uart_putc('d');
-	/* Do shell task */
-	do_shell_task();
+	if(!__dma_pool)
+		__dma_pool = mm_create((void *)__dma_start, (size_t)(__dma_end - __dma_start));
+	if(__dma_pool)
+	{
+		spin_lock_irqsave(&__dma_lock, flags);
+		m = mm_memalign(__dma_pool, SZ_4K, size);
+		spin_unlock_irqrestore(&__dma_lock, flags);
+		return m;
+	}
+	return NULL;
 }
 
-void xboot_main(void)
+void dma_free_coherent(void * addr)
 {
-	sys_uart_putc('1');
+	irq_flags_t flags;
 
-	/* Do initial memory */
-	do_init_mem();
+	if(__dma_pool)
+	{
+		spin_lock_irqsave(&__dma_lock, flags);
+		mm_free(__dma_pool, addr);
+		spin_unlock_irqrestore(&__dma_lock, flags);
+	}
+}
 
-	sys_uart_putc('2');
-
-	/* Do initial scheduler */
-	do_init_sched();
-
-	sys_uart_putc('3');
-
-	/* Create init task */
-	//task_create(scheduler_self(), "init", NULL, NULL, init_task, NULL, 0, 0);
-
-	sys_uart_putc('4');
-	init_task(NULL, NULL);
-	sys_uart_putc('4');
-
-	/* Scheduler loop */
-	//scheduler_loop();
+void dma_cache_sync(void * addr, unsigned long size, int dir)
+{
+	if(dir == DMA_FROM_DEVICE)
+	{
+	}
+	else
+	{
+	}
 }

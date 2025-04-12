@@ -34,6 +34,7 @@ extern initcall_t __initcall_end[];
 extern exitcall_t __exitcall_start[];
 extern exitcall_t __exitcall_end[];
 
+extern void sys_uart_putc(char c);
 void do_initcalls(void)
 {
 	initcall_t * call;
@@ -41,6 +42,7 @@ void do_initcalls(void)
 	call =  &(*__initcall_start);
 	while(call < &(*__initcall_end))
 	{
+		sys_uart_putc('x');
 		(*call)();
 		call++;
 	}

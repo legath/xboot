@@ -5,14 +5,14 @@
 #
 # You can pass CROSS_COMPILE and PLATFORM variable.
 #
-CROSS_COMPILE	?=
-PLATFORM		?=
+CROSS_COMPILE	?= ~/Documents/nds32le-linux-glibc-v5d/bin/riscv32-linux-
+PLATFORM		?= riscv32-v821
 
 #
 # Configurable advanced custom components
 #
-CFG_FRAMEWORK	?= y
-CFG_CAIRO		?= y
+CFG_FRAMEWORK	?= n
+CFG_CAIRO		?= n
 CFG_WBOXTEST 	?= n
 
 #
