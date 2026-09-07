@@ -12,7 +12,7 @@ PLATFORM		?=
 # Configurable advanced custom components
 #
 CFG_FRAMEWORK	?= y
-CFG_CAIRO		?= y
+CFG_CAIRO		?= n
 CFG_WBOXTEST 	?= n
 
 #
@@ -317,7 +317,7 @@ X_ARCHS		:=	$(filter arch/%, $(X_SRCDIRS))
 X_OTHERS	:=	$(filter-out arch/%, $(X_SRCDIRS))
 
 X_SFILES	:=	$(foreach dir, $(X_ARCHS), $(wildcard $(dir)/*.S))
-X_CFILES	:=	$(foreach dir, $(X_ARCHS), $(wildcard $(dir)/*.c))
+X_CFILES	:=	$(filter-out $(X_EXCLUDE_CFILES), $(foreach dir, $(X_ARCHS), $(wildcard $(dir)/*.c)))
 
 X_SOBJS		:=	$(patsubst %, .obj/%, $(X_SFILES:.S=.o))
 X_COBJS		:=	$(patsubst %, .obj/%, $(X_CFILES:.c=.o))

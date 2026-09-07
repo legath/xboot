@@ -10,7 +10,7 @@ STACK_SRV_SIZE = 0x100000 * 2;
 
 MEMORY
 {
-	ram  : org = 0x40000000, len = 16M
+	ram  : org = 0x40000000, len = 8M
 	dma  : org = 0x41000000, len = 16M
 	heap : org = 0x42000000, len = 96M
 }
@@ -21,7 +21,6 @@ SECTIONS
 	{
 		PROVIDE(__image_start = .);
 		PROVIDE(__text_start = .);
-		PROVIDE(__spl_start = .);
 		.obj/arch/arm32/mach-t113s3/start.o (.text*)
 		*libgcc.a:*.o (.text*)
 		.obj/arch/arm32/lib/eabi.o (.text*)
@@ -32,13 +31,6 @@ SECTIONS
 		.obj/arch/arm32/mach-t113s3/sys-clock.o (.text*)
 		.obj/arch/arm32/mach-t113s3/sys-dram.o (.text*)
 		.obj/arch/arm32/mach-t113s3/sys-mmu.o (.text*)
-		.obj/arch/arm32/mach-t113s3/sys-decompress.o (.text*)
-		.obj/arch/arm32/mach-t113s3/sys-hash.o (.text*)
-		.obj/arch/arm32/mach-t113s3/sys-verify.o (.text*)
-		.obj/arch/arm32/mach-t113s3/sys-spinor.o (.text*)
-		.obj/arch/arm32/mach-t113s3/sys-spinand.o (.text*)
-		.obj/arch/arm32/mach-t113s3/sys-copyself.o (.text*)
-		PROVIDE(__spl_end = .);
 		*(.text*)
 		*(.init.text)
 		*(.exit.text)
@@ -46,7 +38,7 @@ SECTIONS
 		*(.note.gnu.build-id)
 		PROVIDE(__text_end = .);
 	} > ram
-	PROVIDE(__spl_size = __spl_end - __spl_start);
+	ASSERT(__image_end - __image_start <= 8M, "xboot image exceeds 8 MiB")
 
 	.ARM.exidx ALIGN(8) :
 	{

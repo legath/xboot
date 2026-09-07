@@ -112,7 +112,7 @@ static int mach_verify(struct machine_t * mach)
 
 static struct machine_t mangopi = {
 	.name 		= "mangopi",
-	.desc 		= "MangoPi-MQ Based On Allwinner T133-S3 SOC",
+	.desc 		= "Allwinner T133-S3 SOC",
 	.detect 	= mach_detect,
 	.smpinit	= mach_smpinit,
 	.smpboot	= mach_smpboot,

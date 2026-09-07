@@ -81,23 +81,8 @@
  * Exception vector table
  */
 .text
-	.arm
-
 	.global _start
 _start:
-	/* Boot head information for BROM */
-	.long 0xea00000e
-	.byte 'e', 'G', 'O', 'N', '.', 'B', 'T', '0'
-	.long 0x12345678				/* checksum */
-	.long __spl_size				/* spl size */
-	.long 0x30						/* boot header size */
-	.long 0x30303033				/* boot header version */
-	.long 0x00020000				/* return value */
-	.long 0x00020000				/* run address */
-	.long 0x0						/* eGON version */
-	.byte 0x00, 0x00, 0x00, 0x00	/* platform information - 8byte */
-	.byte 0x34, 0x2e, 0x30, 0x00
-	.long 0, 0, 0, 0				/* reserve */
 
 	.align 5
 _vector:
@@ -129,30 +114,6 @@ _fiq:
  * The actual reset code
  */
 reset:
-	/* Save boot params to 0x00047fe0 */
-	ldr r0, =0x00047fe0
-	str sp, [r0, #0]
-	str lr, [r0, #4]
-	mrs lr, cpsr
-	str lr, [r0, #8]
-	mrc p15, 0, lr, c1, c0, 0
-	str lr, [r0, #12]
-	mrc p15, 0, lr, c12, c0, 0
-	str lr, [r0, #16]
-	mrc p15, 0, lr, c1, c0, 0
-	str lr, [r0, #20]
-
-	/* Check flag and enter to fel mode */
-	ldr r0, =0x07090108
-	ldr r1, [r0]
-	ldr r2, =0x5aa5a55a
-	cmp r1, r2
-	bne _entry
-	mov r1, #0
-	str r1, [r0]
-	bl return_to_fel
-
-_entry:
 	/* Enter svc mode cleanly and mask interrupts */
 	mrs r0, cpsr
 	eor r0, r0, #0x1a
@@ -187,47 +148,6 @@ _entry:
 	isb
 	mov r0, #0x40000000
 	vmsr fpexc, r0
-
-	/* Check initialized and using master core */
-	adr r0, _start
-	ldr r1, =_start
-	cmp r0, r1
-	beq _speedup
-	mrc p15, 0, r0, c0, c0, 5
-	ands r0, #0xf
-	bne _speedup
-
-	/* Initial system jtag, uart, clock and ddr */
-	bl sys_jtag_init
-	bl sys_uart_init
-	bl sys_clock_init
-	bl sys_dram_init
-
-	/* Invalidate cache */
-	mov r0, #0
-	mcr p15, 0, r0, c8, c7, 0
-	mcr p15, 0, r0, c7, c5, 0
-	mcr p15, 0, r0, c7, c5, 6
-	mcr p15, 0, r0, c7, c10, 4
-	mcr p15, 0, r0, c7, c5, 4
-
-	/* Boot speed up, leave slower sram */
-	adr r0, _start
-	ldr r1, =_start
-	cmp r0, r1
-	beq _speedup
-	ldr r0, =0x43f80000
-	adr r1, _start
-	ldr r2, =__spl_size
-	bl memcpy
-	ldr r0, =_speedup
-	ldr r1, =_start
-	sub r0, r0, r1
-	ldr r1, =0x43f80000
-	add r0, r0, r1
-	mov pc, r0
-_speedup:
-	nop
 
 	/* Initialize stacks */
 	mrc p15, 0, r4, c0, c0, 5
@@ -323,14 +243,6 @@ _slave:
 _master:
 	nop
 
-	/* Copyself to link address */
-	adr r0, _start
-	ldr r1, =_start
-	cmp r0, r1
-	beq 1f
-	bl sys_copyself
-1:	nop
-
 	/* Clear bss section */
 	ldr r0, _bss_start
 	ldr r2, _bss_end
@@ -347,7 +259,7 @@ _master:
 	mcr p15, 0, r0, c7, c5, 4
 
 	/* Set the slave core's boot function */
-	ldr r1, =_entry
+	ldr r1, =reset
 	ldr r2, =0x070005c8
 	str r1, [r2]
 	/* Deassert slave core */
@@ -389,21 +301,6 @@ udiv32:
 	lsrs r3, r3, #1
 	bcc 2b
 3:	mov pc, lr
-
-	.global return_to_fel
-return_to_fel:
-	ldr r0, =0x00047fe0
-	ldr sp, [r0, #0]
-	ldr lr, [r0, #4]
-	ldr r1, [r0, #20]
-	mcr p15, 0, r1, c1, c0, 0
-	ldr r1, [r0, #16]
-	mcr p15, 0, r1, c12, c0, 0
-	ldr r1, [r0, #12]
-	mcr p15, 0, r1, c1, c0, 0
-	ldr r1, [r0, #8]
-	msr cpsr, r1
-	bx lr
 
 /*
  * Exception handlers

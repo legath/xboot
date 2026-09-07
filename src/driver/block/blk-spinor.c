@@ -176,6 +176,8 @@ static bool_t blk_spinor_read_id(struct spi_device_t * dev, u32_t * id)
 
 static const struct spinor_info_t blk_spinor_infos[] = {
 	{ "W25X40",   0xef3013, 512 * 1024, 4096, 1, 256, 3, OPCODE_READ, OPCODE_PROG, OPCODE_WREN, OPCODE_E4K,           0, OPCODE_E64K, 0 },
+	{ "W25Q128",  0xef4018,  16 * 1024 * 1024, 4096, 1, 256, 3, OPCODE_READ, OPCODE_PROG, OPCODE_WREN, OPCODE_E4K, 0, OPCODE_E64K, 0 },
+	{ "W25Q128",  0xef6018,  16 * 1024 * 1024, 4096, 1, 256, 3, OPCODE_READ, OPCODE_PROG, OPCODE_WREN, OPCODE_E4K, 0, OPCODE_E64K, 0 },
 	{ "GD25D10B", 0xc84011, 128 * 1024, 4096, 1, 256, 3, OPCODE_READ, OPCODE_PROG, OPCODE_WREN, OPCODE_E4K, OPCODE_E32K, OPCODE_E64K, 0 },
 };
 
